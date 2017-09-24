@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com._520it.wms.mapper.RoleMapper">
+
+    <resultMap type="Role" id="baseResultMap">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="sn" column="sn"/>
+        <collection property="permissions" ofType="Permission" column="id"
+                    select="com._520it.wms.mapper.PermissionMapper.selectByRoleId"/>
+        <collection property="menus" ofType="SystemMenu" column="id"
+                    select="com._520it.wms.mapper.SystemMenuMapper.selectByRoleId"/>
+    </resultMap>
+
+    <insert id="save" useGeneratedKeys="true" keyColumn="id" keyProperty="id">
+		insert into role(name,sn) values(#{name},#{sn})
+	</insert>
+
+    <update id="update">
+		update role set name = #{name} , sn = #{sn} where id = #{id} 
+	</update>
+
+    <delete id="delete">
+		delete from role where id = #{id}
+	</delete>
+
+    <select id="get" resultMap="baseResultMap">
+		select id,name,sn from role where id = #{id}
+	</select>
+
+    <select id="listAll" resultMap="baseResultMap">
+		select id,name,sn from role
+	</select>
+
+    <select id="queryForCount" resultType="int">
+		select count(id) from role
+	</select>
+    <select id="queryForList" resultMap="baseResultMap">
+		select id,name,sn from role
+		limit #{start} , #{pageSize}
+	</select>
+    <insert id="insertRelation">
+		insert into role_permission(role_id,permission_id) values(#{roleId},#{permissionId})
+	</insert>
+    <insert id="insertMenuRelation">
+		insert into role_menu(role_id,menu_id) values(#{roleId},#{menuId})
+	</insert>
+    <delete id="deleteRelation">
+		delete from role_permission where role_id = #{id}
+	</delete>
+    <delete id="deleteMenuRelation">
+		delete from role_menu where role_id = #{id}
+	</delete>
+    <delete id="batchDelete">
+        delete from role where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <select id="selectByEmployeeId" resultMap="baseResultMap">
+		SELECT * from role r JOIN employee_role er on r.id = er.role_id WHERE er.employee_id = #{employeeId}
+	</select>
+
+    <select id="queryByEmployeeId" resultType="java.lang.String">
+		SELECT sn FROM role WHERE id IN (
+          SELECT role_id FROM employee_role WHERE employee_id  = #{id});
+	</select>
+</mapper>

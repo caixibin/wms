@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        ">
+	<!--修改spring动态代理的模式-->
+	<aop:config proxy-target-class="true"/>
+	<!--添加注解扫描器-->
+	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="securityManager" ref="securityManager"/>
+	</bean>
+
+	<!--自定义realm-->
+	<bean id="myRealm" class="com._520it.wms.realm.MyRealm">
+		<property name="employeeService" ref="employeeService"/>
+		<property name="roleService" ref="roleService"/>
+		<property name="permissionService" ref="permissionService"/>
+		<property name="credentialsMatcher" ref="credentialsMatcher"/>
+	</bean>
+	<!--securityManager 安全管理器-->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="realm" ref="myRealm"/>
+		<property name="cacheManager" ref="cacheManager"/>
+		<property name="sessionManager" ref="sessionManager"/>
+	</bean>
+
+	<!--会话管理-->
+	<bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+		<!-- session的失效时长，单位毫秒 -->
+		<property name="globalSessionTimeout" value="120000"/>
+		<!-- 删除失效的session -->
+		<property name="deleteInvalidSessions" value="true"/>
+	</bean>
+
+	<!--filter-->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager"/>
+		<property name="loginUrl" value="/login.action"/>
+		<property name="successUrl" value="/main.action"/>
+		<property name="unauthorizedUrl" value="/nopermission.jsp"/>
+		<property name="filterChainDefinitions">
+			<value>
+				/favicon.ico=anon<!--页面没有小图标-->
+				/images/**=anon
+				/js/**=anon
+				/style/**=anon
+				/upload/**=anon
+				/**=authc
+			</value>
+		</property>
+	</bean>
+
+	<!--缓存配置-->
+	<bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+		<property name="cacheManager" ref="ehCacheManager"/>
+	</bean>
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+		<property name="configLocation" value="classpath:shiro-ehcache.xml"/>
+		<property name="shared" value="true"/>
+	</bean>
+
+
+
+	<!--添加凭证匹配器(为密码加盐操作)-->
+	<bean id="credentialsMatcher" class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+		<property name="hashAlgorithmName" value="md5"/>
+		<property name="hashIterations" value="1"/>
+	</bean>
+
+</beans>

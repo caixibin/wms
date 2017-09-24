@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com._520it.wms.mapper.ChartMapper">
+    <sql id="base_where">
+        <where>
+            o.status = 1
+            <if test="beginDate != null">
+                AND  o.vdate >= #{beginDate}
+            </if>
+            <if test="endDate != null">
+                AND  o.vdate &lt;= #{endDate}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.sn LIKE '%' #{keyword} '%' or p.name LIKE '%' #{keyword} '%')
+            </if>
+            <if test="supplierId > 0">
+                AND  o.supplier_id = #{supplierId}
+            </if>
+            <if test="brandId > 0">
+                AND  p.brand_Id = #{brandId}
+            </if>
+        </where>
+    </sql>
+    <select id="orderChart" resultType="hashmap">
+      SELECT
+          ${groupType} groupType,
+          sum(item.amount) totalAmount,
+          sum(item.number) totalNumber
+        FROM orderbillitem item
+        JOIN product p ON item.product_id = p.id
+        JOIN brand b ON p.brand_id=b.id
+        JOIN orderbill o ON item.bill_id = o.id
+        JOIN employee iu ON o.inputUser_id = iu.id
+        JOIN supplier s ON o.supplier_id=s.id
+        <include refid="base_where"></include>
+        GROUP BY ${groupType}
+    </select>
+    <sql id="sale_where">
+        <where>
+            <if test="beginDate != null">
+                AND sa.vdate >= #{beginDate}
+            </if>
+            <if test="endDate != null">
+                and sa.vdate &lt;= #{endDate}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and p.name like '%' #{keyword} '%'
+            </if>
+            <if test="clientId > 0">
+                and sa.client_id = #{clientId}
+            </if>
+            <if test="brandId > 0">
+                and b.id = #{brandId}
+            </if>
+        </where>
+    </sql>
+    <select id="saleChart" resultType="hashmap">
+      SELECT
+      ${groupType} groupType,
+      sum(sa.number)totalNumber,
+      sum(sa.saleAmount)totalAmount,
+      sum(sa.saleAmount-sa.costAmount) grossProfit
+      FROM saleaccount sa
+        JOIN employee sm ON sa.saleman_id = sm.id
+        JOIN product p ON sa.product_id = p.id
+        JOIN client c ON sa.client_id = c.id
+        JOIN brand b ON p.brand_id = b.id
+        <include refid="sale_where"/>
+        GROUP BY ${groupType}
+    </select>
+</mapper>

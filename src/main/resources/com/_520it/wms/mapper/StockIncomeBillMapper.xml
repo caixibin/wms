@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com._520it.wms.mapper.StockIncomeBillMapper" >
+  <resultMap id="BaseResultMap" type="com._520it.wms.domain.StockIncomeBill" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="sn" property="sn" jdbcType="VARCHAR" />
+    <result column="vdate" property="vdate" jdbcType="TIMESTAMP" />
+    <result column="status" property="status" jdbcType="INTEGER" />
+    <result column="totalAmount" property="totalAmount" jdbcType="DECIMAL" />
+    <result column="totalNumber" property="totalNumber" jdbcType="DECIMAL" />
+    <result column="auditTime" property="auditTime" jdbcType="TIMESTAMP" />
+    <result column="inputTime" property="inputTime" jdbcType="TIMESTAMP" />
+
+    <association property="inputUser" columnPrefix="iu_"
+                 resultMap="com._520it.wms.mapper.EmployeeMapper.SimpleResultMap"/>
+    <association property="auditor" columnPrefix="au_"
+                 resultMap="com._520it.wms.mapper.EmployeeMapper.SimpleResultMap"/>
+    <association property="depot" columnPrefix="d_"
+                 resultMap="com._520it.wms.mapper.DepotMapper.BaseResultMap"/>
+    <collection property="items" ofType="StockIncomeBillItem" column="id"
+                select="com._520it.wms.mapper.StockIncomeBillItemMapper.selectByBillId"/>
+  </resultMap>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long" >
+    delete from `stockincomebill`
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <delete id="batchDelete">
+    delete from `stockincomebill`
+    where id IN
+    <foreach collection="list" item="item" open="(" separator="," close=")">
+      #{item}
+    </foreach>
+  </delete>
+
+  <insert id="insert" parameterType="com._520it.wms.domain.StockIncomeBill" useGeneratedKeys="true" keyProperty="id" >
+    insert into `stockincomebill` (sn, vdate, status, 
+      totalAmount, totalNumber, auditTime, 
+      inputTime, inputUser_id, auditor_id, 
+      depot_id)
+    values (#{sn,jdbcType=VARCHAR}, #{vdate,jdbcType=TIMESTAMP}, #{status,jdbcType=INTEGER}, 
+      #{totalAmount,jdbcType=DECIMAL}, #{totalNumber,jdbcType=DECIMAL}, #{auditTime,jdbcType=TIMESTAMP}, 
+      #{inputTime,jdbcType=TIMESTAMP}, #{inputUser.id,jdbcType=BIGINT}, #{auditor.id,jdbcType=BIGINT},
+      #{depot.id,jdbcType=BIGINT})
+  </insert>
+  
+  <update id="updateByPrimaryKey" parameterType="com._520it.wms.domain.StockIncomeBill" >
+    update `stockincomebill`
+    set sn = #{sn,jdbcType=VARCHAR},
+      vdate = #{vdate,jdbcType=TIMESTAMP},
+      totalAmount = #{totalAmount,jdbcType=DECIMAL},
+      totalNumber = #{totalNumber,jdbcType=DECIMAL},
+      depot_id = #{depot.id,jdbcType=BIGINT}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+
+  <update id="audit">
+    UPDATE stockincomebill
+    SET auditor_id = #{auditor.id},auditTime = #{auditTime},status=#{status}
+    where id = #{id}
+  </update>
+
+  <sql id="base_select">
+    bill.id, bill.sn, bill.vdate, bill.status, bill.totalAmount, bill.totalNumber,
+    bill.auditTime, bill.inputTime, bill.inputUser_id,bill.auditor_id, bill.depot_id,
+    d.id d_id,d.name d_name,
+    iu.id iu_id,iu.name iu_name,
+    au.id au_id,au.name au_name
+  </sql>
+  <sql id="base_from">
+    `stockincomebill` bill
+    JOIN depot d ON bill.depot_id = d.id
+    JOIN employee iu ON bill.inputUser_id = iu.id
+    LEFT JOIN employee au ON bill.auditor_id = au.id
+  </sql>
+
+  <sql id="base_where">
+    <where>
+      <if test="beginDate != null">
+        AND  bill.vdate >= #{beginDate}
+      </if>
+      <if test="endDate != null">
+        AND  bill.vdate &lt;= #{endDate}
+      </if>
+      <if test="depotId > 0">
+        AND  bill.depot_id = #{depotId}
+      </if>
+      <if test="status > -1">
+        AND  bill.status = #{status}
+      </if>
+    </where>
+  </sql>
+
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    select bill.id, bill.sn, bill.vdate, bill.status, bill.totalAmount, bill.totalNumber,
+    bill.auditTime, bill.inputTime, bill.inputUser_id,bill.auditor_id, bill.depot_id,
+    d.id d_id,d.name d_name
+    from  `stockincomebill` bill
+    JOIN depot d ON bill.depot_id = d.id
+    where bill.id = #{id,jdbcType=BIGINT}
+  </select>
+
+  <select id="queryForCount" resultType="java.lang.Integer">
+    select count(bill.id)
+    from <include refid="base_from"/>
+    <include refid="base_where"/>
+  </select>
+
+  <select id="queryForList" resultMap="BaseResultMap">
+    select <include refid="base_select"/>
+    from <include refid="base_from"/>
+    <include refid="base_where"/>
+    limit #{start} , #{pageSize}
+  </select>
+</mapper>
